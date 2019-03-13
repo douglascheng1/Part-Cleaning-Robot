@@ -5,6 +5,7 @@ char direction = 'f';
 unsigned long ul_Echo_Time;
 unsigned long currentMillis = millis();
 unsigned long previousMillis = millis();
+bool motors = true;
 
 void setup(){}
 
@@ -13,7 +14,16 @@ void loop()
   check_US();
   currentMillis = millis();
   if (direction == 'f') {
-  
+    if (motors) {
+      servo_LeftMotor.writeMicroseconds(1700);
+      servo_RightMotor.writeMicroseconds(1700);
+    }
+    else {
+      servo_LeftMotor.writeMicroseconds(1500);
+      servo_RightMotor.writeMicroseconds(1500);
+    }
+    
+    
     if (currentMillis - previousMillis >= 60 000){
       previousMillis = currentMillis;
       direction = 'b';
