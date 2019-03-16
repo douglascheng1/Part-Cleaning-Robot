@@ -54,60 +54,8 @@ int infaredCheckTime = 1000;        //how long to spin for when checking infared
 int infaredNumber = 0;
 unsigned long ul_Echo_Time;
 boolean Encoder_Turn = true;
-
-
-//functions
-void rotate90(){
-  int preSpin = millis();
-  int postSpin = preSpin;
-  
-  //note: while function is acceptable for resets
-  //note2: this will be a stationary turn. does not need to account for obstacles
-  while ((postSpin-preSpin)>=turnTime45){
-    //turning right for first run cycle
-    if (runFlag == 0){
-      motor_Left_Speed = 1600;
-      motor_Right_Speed = 800;
-    }
-
-    //turning left for second run cycle
-    else{
-      motor_Left_Speed = 800;
-      motor_Right_Speed = 1600; 
-    } 
-  }
-}
-
-void rotate180(){
-  int preSpin = millis();
-  int postSpin = preSpin;
-  
-  //note: while function is acceptable for resets
-  //note2: this will be a stationary turn. does not need to account for obstacles
-  while ((postSpin-preSpin)>=turnTime180){
-      motor_Left_Speed = 1600;
-      motor_Right_Speed = 800;
-  }
-}
-
-void infaredCheck(){
-  int preSpin = millis();
-  int postSpin = preSpin;
-  while(postSpin - preSpin >= infaredCheckTime){
-    //returns 0 if found on front
-    if (digitalRead(infared_Front)==0){
-      infaredNumber = 1;
-    }
-    //returns 1 if seen from back
-    else if (digitalRead(infared_Back)==0){
-      infaredNumber = -1;
-    }
-      motor_Left_Speed = 1600;
-      motor_Right_Speed = 800;
-  }
-  //returns -1 if not found
-  infaredNumber = 0;
-}
+boolean East_check;
+int ZigZag = 0;
 
 
 void setup() {
@@ -174,14 +122,27 @@ void loop() {
      }
   }
 
-  //coming back code (30-90sec)
-  else if ((((millis<90000) && (millis>30000))||(millis<180000)&&(millis>120000)) && infaredNumber==0){
-  
+  if ((millis > 30000) && (direction == false){
+    servo_LeftMotor.writeMicroseconds(1700);
+    servo_RightMotor.writeMicroseconds(1300);
   }
-  //stop
-  else{
-    servo_LeftMotor.write(200);
-    servo_RightMotor.write(200);
+  
+  if ((millis > 30000) && (direction == true)){
+    if (ZigZag == 0){
+      servo_LeftMotor.writeMicroseconds(1700);
+      servo_RightMotor.writeMicroseconds(1300);
+      Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+       if (Curr_Left_Motor_Position - Prev_Left_Motor_Position >= 200){ // Maybe change 200
+        ZigZag = 1;
+       }
+    else if (ZigZag == 1){
+      servo_LeftMotor.writeMicroseconds(1300);
+      servo_RightMotor.writeMicroseconds(1700);
+      Curr_Right_Motor_Position = encoder_RightMotor.getRawPosition();
+       if (Curr_Right_Motor_Position - Prev_Right_Motor_Position >= 200){ // Maybe change 200
+        ZigZag = 0;
+        } 
+    }
   }
 
 }
@@ -219,12 +180,64 @@ int check_US() // Function to check ultrasonics
       servo_RightMotor.writeMicroseconds(1300);
       check = 2;
     }
-    
+    Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+    Prev_Right_Motor_Position = encoder_RightMotor.getRawPosition();
   }
   else {
     continue; // keep current speeds
   }
-  Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
-  Prev_Right_Motor_Position = encoder_RightMotor.getRawPosition();
   return check;
+}
+
+//functions
+void rotate90(){
+  int preSpin = millis();
+  int postSpin = preSpin;
+  
+  //note: while function is acceptable for resets
+  //note2: this will be a stationary turn. does not need to account for obstacles
+  while ((postSpin-preSpin)>=turnTime45){
+    //turning right for first run cycle
+    if (runFlag == 0){
+      motor_Left_Speed = 1600;
+      motor_Right_Speed = 800;
+    }
+
+    //turning left for second run cycle
+    else{
+      motor_Left_Speed = 800;
+      motor_Right_Speed = 1600; 
+    } 
+  }
+}
+
+void rotate180(){
+  int preSpin = millis();
+  int postSpin = preSpin;
+  
+  //note: while function is acceptable for resets
+  //note2: this will be a stationary turn. does not need to account for obstacles
+  while ((postSpin-preSpin)>=turnTime180){
+      motor_Left_Speed = 1600;
+      motor_Right_Speed = 800;
+  }
+}
+
+void infaredCheck(){
+  int preSpin = millis();
+  int postSpin = preSpin;
+  while(postSpin - preSpin >= infaredCheckTime){
+    //returns 0 if found on front
+    if (digitalRead(infared_Front)==0){
+      infaredNumber = 1;
+    }
+    //returns 1 if seen from back
+    else if (digitalRead(infared_Back)==0){
+      infaredNumber = -1;
+    }
+      motor_Left_Speed = 1600;
+      motor_Right_Speed = 800;
+  }
+  //returns -1 if not found
+  infaredNumber = 0;
 }
