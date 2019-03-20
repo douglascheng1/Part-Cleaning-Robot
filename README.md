@@ -131,7 +131,7 @@ void loop() {
     if (ZigZag == 0){
       servo_LeftMotor.writeMicroseconds(1700);
       servo_RightMotor.writeMicroseconds(1300);
-      Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+      Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition(); // Add Prev update into US check
        if (Curr_Left_Motor_Position - Prev_Left_Motor_Position >= 200){ // Maybe change 200
         ZigZag = 1;
        }
