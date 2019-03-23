@@ -32,6 +32,7 @@ const int motor_Right = 6;
 const int motor_Left = 7;
 const int infared_Front = 8;
 const int infared_Back = 9;
+const int bumper_switch = 2;
 
 //calibration values
 unsigned int motor_Speed = 1900;        //run speed
@@ -87,6 +88,9 @@ void setup() {
   encoder_LeftMotor.setReversed(false);  // adjust for positive count when moving forward
   encoder_RightMotor.init(1.0 / 3.0 * MOTOR_393_SPEED_ROTATIONS, MOTOR_393_TIME_DELTA);
   encoder_RightMotor.setReversed(true);  // adjust for positive count when moving forward
+  
+  digitalWrite(bumper_switch, LOW);
+  attachInterrupt(0, bumpers, RISING);
 
   delay(5000);
   servo_LeftMotor.writeMicroseconds(1700);
@@ -190,37 +194,12 @@ int check_US() // Function to check ultrasonics
 }
 
 //functions
-void rotate90(){
-  int preSpin = millis();
-  int postSpin = preSpin;
-  
-  //note: while function is acceptable for resets
-  //note2: this will be a stationary turn. does not need to account for obstacles
-  while ((postSpin-preSpin)>=turnTime45){
-    //turning right for first run cycle
-    if (runFlag == 0){
-      motor_Left_Speed = 1600;
-      motor_Right_Speed = 800;
-    }
 
-    //turning left for second run cycle
-    else{
-      motor_Left_Speed = 800;
-      motor_Right_Speed = 1600; 
-    } 
-  }
-}
-
-void rotate180(){
-  int preSpin = millis();
-  int postSpin = preSpin;
-  
-  //note: while function is acceptable for resets
-  //note2: this will be a stationary turn. does not need to account for obstacles
-  while ((postSpin-preSpin)>=turnTime180){
-      motor_Left_Speed = 1600;
-      motor_Right_Speed = 800;
-  }
+void bumpers(){
+  servo_LeftMotor.writeMicroseconds(1300);
+  servo_RightMotor.writeMicroseconds(1300);
+  delay(500);
+  check_US();
 }
 
 void infaredCheck(){
