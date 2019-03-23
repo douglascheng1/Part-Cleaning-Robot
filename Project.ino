@@ -23,27 +23,24 @@ int US_check = 0;
 
 //pins (changeable)
 const int startButton = 1;
-const int ultrasonic_Front_IN = 2;
-const int ultrasonic_Front_OUT = 2;
-const int ultrasonic_Left_IN = 4;
+const int ultrasonic_Front_IN = 5;
+const int ultrasonic_Front_OUT = 6;
+const int ultrasonic_Left_IN = 3;
 const int ultrasonic_Left_OUT = 4;
-const int ultrasonic_Right_IN = 5;
-const int ultrasonic_Right_OUT = 5;
-const int motor_Right = 6;
-const int motor_Left = 7;
-const int infared = 8;
+const int ultrasonic_Right_IN = 7;
+const int ultrasonic_Right_OUT = 8;
+const int motor_Right = 11;
+const int motor_Left = 10;
+const int infared = 999;
 
 //calibration values
-unsigned int motor_Speed = 1900;        //run speed
+unsigned int motor_Speed = 1700;        //run speed
 unsigned int motor_Speed_Offset = 200;
 unsigned int motor_Left_Speed;
 unsigned int motor_Right_Speed;
-unsigned int ultrasonic_Front_Distance = 500;    //FL US distance
-unsigned int ultrasonic_Left_Distance = 500;          //L US distance
-unsigned int ultrasonic_Right_Distance = 500;         //L US distance
-
-
-//helper variables
+unsigned int ultrasonic_Front_Distance = 20;    //FL US distance
+unsigned int ultrasonic_Left_Distance = 20;          //L US distance
+unsigned int ultrasonic_Right_Distance = 20;         //L US distance
 
 
 //helper variables
@@ -55,7 +52,9 @@ unsigned int timeCharged = 0;
 boolean infaredSeen = false;
 char bearing;
 unsigned long ul_Echo_Time;
-boolean Encoder_Turn = true;
+unsigned int distance_Front = 0;
+unsigned int distance_Left = 0;
+unsigned int distance_Right = 0;
 
 
 void setup() {
@@ -94,20 +93,52 @@ void setup() {
 }
 
 void loop() {
-  switch (digitalRead(startButton)) {
-  case 0:
-    break;
-  case 1:
-
     //checks to see if it will bump into things
-      ultrasonic_Clear[0] = analogRead(ultrasonic_Front_IN) > ultrasonic_Front_Distance;
-      ultrasonic_Clear[1] = analogRead(ultrasonic_Left_IN) > ultrasonic_Left_Distance;
-      ultrasonic_Clear[2] = analogRead(ultrasonic_Right_IN) > ultrasonic_Right_Distance;
+      distance_Front = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT);
+      distance_Right = Ping(ultrasonic_Right_IN, ultrasonic_Right_OUT);
+      distance_Left= Ping(ultrasonic_Left_IN, ultrasonic_Left_OUT);
+      
+      ultrasonic_Clear[0] = distance_Front >= ultrasonic_Front_Distance;
+      ultrasonic_Clear[1] = distance_Right >= ultrasonic_Left_Distance;
+      ultrasonic_Clear[2] = distance_Left >= ultrasonic_Right_Distance;
+      
 
 
       
       US_check = check_US();
 
+
+    if (ultrasonic_Clear[0] && ultrasonic_Clear[1] && ultrasonic_Clear[2]){
+      servo_LeftMotor.write(motor_Speed);
+      servo_RightMotor.write(motor_Speed);
+    }
+
+    //slight right
+    else if (ultrasonic_Clear[0] && !ultrasonic_Clear[1] && ultrasonic_Clear[2]){
+      servo_LeftMotor.write(motor_Speed + motor_Speed_Offset);
+      servo_RightMotor.write(motor_Speed - motor_Speed_Offset);      
+    }
+    //slight left
+    else if (ultrasonic_Clear[0] && ultrasonic_Clear[1] && !ultrasonic_Clear[2]){
+      servo_LeftMotor.write(motor_Speed - motor_Speed_Offset);
+      servo_RightMotor.write(motor_Speed + motor_Speed_Offset);      
+    }
+    //spin on spot
+    else{
+      //clockwise first
+      if (timeCharged==0){
+      servo_LeftMotor.write(motor_Speed); //forwards
+      servo_RightMotor.write(900);        //backwards
+      }
+      //counterclockewise after
+      else{
+      servo_LeftMotor.write(900);         //backwards
+      servo_RightMotor.write(motor_Speed);//forwards
+      }
+    }
+    
+    
+    /*
       //run 1(0-30sec)
       if (millis < 30000) {
 
@@ -187,7 +218,7 @@ void loop() {
         servo_RightMotor.write(200);
       }
       break;
-  }
+      */
 
 }
 
@@ -210,21 +241,20 @@ int check_US() // Function to check ultrasonics
 {
   int check = 0;
   int middle = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT); // Change to actual variable
-  if (middle <= 7) {
-    int left = Ping(ultrasonic_Left_IN, ultrasonic_Left_OUT); // change to actual variables for pins of US
-    int right = Ping(ultrasonic_Right_IN, ultrasonic_Right_OUT);
+  int left = Ping(ultrasonic_Left_IN, ultrasonic_Left_OUT); // change to actual variables for pins of US
+  int right = Ping(ultrasonic_Right_IN, ultrasonic_Right_OUT);
+    //check = 1, turn left
     if (right < left) {
-      servo_LeftMotor.writeMicroseconds(1300);
-      servo_RightMotor.writeMicroseconds(1700);
+      //servo_LeftMotor.writeMicroseconds(1300);
+      //servo_RightMotor.writeMicroseconds(1700);
       check = 1;
     }
+    //check = 2, turn right
     else {
-      servo_LeftMotor.writeMicroseconds(1700);
-      servo_RightMotor.writeMicroseconds(1300);
+      //servo_LeftMotor.writeMicroseconds(1700);
+      //servo_RightMotor.writeMicroseconds(1300);
       check = 2;
     }
-
-  }
   Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
   Prev_Right_Motor_Position = encoder_RightMotor.getRawPosition();
   return check;
