@@ -21,14 +21,13 @@ long Curr_Left_Motor_Position;
 
 double initAngle; //initial angle of compass to be stored
 double currAngle; // will store current angle of compass to compare to initial angle
-boolean setInitAngle=false; 
 double angleOffset=3; //may need to adjust based on testing
 double currDirection;
 double north;
 double south;
 boolean checkFront=false;
 
-unsigned long prevMillis=0;
+unsigned long prevMillis=0; //prevMillis will reset when robot is in charging station
 unsigned long currentMillis=0;
 int returnTimer = 30000
 
@@ -83,6 +82,7 @@ void loop() {
   
   Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
   currentMillis=millis();
+  
   mpu6050.update();
   Serial.print("\tangleZ : ");
   Serial.println(mpu6050.getAngleZ());
