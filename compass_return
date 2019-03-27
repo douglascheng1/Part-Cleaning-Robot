@@ -26,7 +26,7 @@ double angleOffset=3; //may need to adjust based on testing
 double currDirection;
 double north;
 double south;
-boolean turnside=false;
+boolean turnside=true;
 boolean turnfront=false;
 
 unsigned long prevMillis=0;
@@ -135,13 +135,13 @@ void loop() {
         turnside=true;
       }
     }
-    if (currDirection==north&&IRSensor=true)
+    if (currDirection==north&&IRSensor=true)//if going north and IR sensor returns HIGH value
     {
       //90 degree turn clockwise
       turnfront=true;
       turnside=false
     }
-    if (currDirection==south&&//IR_Check_Left==true)
+    if (currDirection==south&&//IR_Check_Left==true)//if going north and IR sensor returns HIGH value
     {
       //90 degree turn counter-clockwise
       turnfront=true;
