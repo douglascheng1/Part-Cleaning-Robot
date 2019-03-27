@@ -12,7 +12,7 @@ Servo servo_LeftMotor;
 MPU6050 mpu6050(Wire);
 
 I2CEncoder encoder_RightMotor;
-I2CEncoder encoder_LeftMotor;
+I2CEncoder encoder_LeftMotor; 
 
 const int motor_Right = 11;
 const int motor_Left = 10;
@@ -21,13 +21,15 @@ long Curr_Left_Motor_Position;
 
 double initAngle; //initial angle of compass to be stored
 double currAngle; // will store current angle of compass to compare to initial angle
+boolean setInitAngle=false; 
 double angleOffset=3; //may need to adjust based on testing
 double currDirection;
 double north;
 double south;
-boolean checkFront=false;
+boolean turnside=false;
+boolean turnfront=false;
 
-unsigned long prevMillis=0; //prevMillis will reset when robot is in charging station
+unsigned long prevMillis=0;
 unsigned long currentMillis=0;
 int returnTimer = 30000
 
@@ -65,8 +67,6 @@ void setup() {
 }
 
 void loop() {
-  //pls feel free to point out any issues i'm still writing to make it work better
-
 
   //Serial.print("Right Motor: ");
   //Serial.println(encoder_RightMotor.getRawPosition());
@@ -84,7 +84,6 @@ void loop() {
   
   Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
   currentMillis=millis();
-  
   mpu6050.update();
   Serial.print("\tangleZ : ");
   Serial.println(mpu6050.getAngleZ());
@@ -103,43 +102,53 @@ void loop() {
     if (currAngle<=360&&currAngle>=180)//after obstacles are navigated around robot will continue in northern direction
     {
       currDirection=north;
+      if turnside=true;
+      {
       if(currAngle>270+angleOffset)
       {
         servo_RightMotor.writeMicroseconds(1300);
         servo_LeftMotor.writeMicroseconds(1700);
+        
       }
       else if (currAngle<270-angleOffset)
       {
         servo_LeftMotor.writeMicroseconds(1300);
         servo_RightMotor.writeMicroseconds(1700);
+       
       }   
+      }
     }
     else 
     {
       currDirection=south;
+      if (turnside=true)
       if (currAngle>90+angleOffset)
       {
         servo_LeftMotor.writeMicroseconds(1300);
         servo_RightMotor.writeMicroseconds(1700);
+        turnside=true;
       }
       else if (currAngle<90-angleOffset)
       {
         servo_RightMotor.writeMicroseconds(1300):
         servo_LeftMotor.writeMicroseconds(1700);
+        turnside=true;
       }
     }
-    if (currDirection==north&&//IR_Check_Right==true)
+    if (currDirection==north&&IRSensor=true)
     {
       //90 degree turn clockwise
-      checkFront=true;// don't know if this is the best place for this
+      turnfront=true;
+      turnside=false
     }
     if (currDirection==south&&//IR_Check_Left==true)
     {
       //90 degree turn counter-clockwise
-      checkFront=true;
+      turnfront=true;
+      turnside=false
       
     }
-    if(checkFront)
+    if(turnfront==true)
   {
       if (IR_CHECK_FRONT==true)
       {
@@ -153,6 +162,12 @@ void loop() {
          if(!(currAngle>north-angleOffset&&currAngle<north+angleOffset))
          servo_LeftMotor.writeMicroseconds(1300);
          servo_RightMotor.writeMicroseconds(1700);
+         else
+         {
+          turnfront=false;
+          turnside=true;
+         }
+         
         }
         else
         {
@@ -161,14 +176,16 @@ void loop() {
             servo_RightMotor.writeMicroseconds(1300);
             servo_LeftMotor.writeMicroseconds(1700);
           }
+          else
+          {
+            turnfront=false;
+            turnside=true;
+          }
         
        }
      }
     }
-    if ((checkFront==true&&(currAngle<north+angleOffset&&currAngle>north-angleOffset))||(checkFront==true&&(currAngle<south+angleOffset&&currAngle>south-angleOffset)))
-    {
-      checkFront=false;
-    }
+ 
   }
      
 
