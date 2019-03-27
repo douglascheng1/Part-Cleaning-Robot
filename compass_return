@@ -65,6 +65,8 @@ void setup() {
 }
 
 void loop() {
+  //pls feel free to point out any issues i'm still writing to make it work better
+
 
   //Serial.print("Right Motor: ");
   //Serial.println(encoder_RightMotor.getRawPosition());
