@@ -1,0 +1,173 @@
+#include <Servo.h>
+#include <EEPROM.h>
+#include <uSTimer2.h>
+#include <CharliePlexM.h>
+#include <Wire.h>
+#include <I2CEncoder.h>
+#include <MPU6050_tockn.h>
+
+Servo servo_RightMotor;
+Servo servo_LeftMotor;
+
+MPU6050 mpu6050(Wire);
+
+I2CEncoder encoder_RightMotor;
+I2CEncoder encoder_LeftMotor;
+
+const int motor_Right = 11;
+const int motor_Left = 10;
+long Prev_Left_Motor_Position;
+long Curr_Left_Motor_Position;
+
+double initAngle; //initial angle of compass to be stored
+double currAngle; // will store current angle of compass to compare to initial angle
+boolean setInitAngle=false; 
+double angleOffset=3; //may need to adjust based on testing
+double currDirection;
+double north;
+double south;
+boolean checkFront=false;
+
+unsigned long prevMillis=0;
+unsigned long currentMillis=0;
+int returnTimer = 30000
+
+void setup() {
+  Wire.begin();
+  Serial.begin(9600);
+  mpu6050.begin();
+ //
+  mpu6050.calcGyroOffsets(true);
+  initAngle=mpu6050.getAngleZ();
+  north=initAngle+270;
+  south=initAngle+90;
+  changeDirection=north;
+  
+  
+  // set up drive motors
+  pinMode(motor_Right, OUTPUT);
+  servo_RightMotor.attach(motor_Right);
+  pinMode(motor_Left, OUTPUT);
+  servo_LeftMotor.attach(motor_Left);
+  
+  
+  // set up encoders. Must be initialized in order that they are chained together,
+  // starting with the encoder directly connected to the Arduino. See I2CEncoder docs
+  // for more information
+  encoder_LeftMotor.init(1.0 / 3.0 * MOTOR_393_SPEED_ROTATIONS, MOTOR_393_TIME_DELTA);
+  encoder_LeftMotor.setReversed(false);  // adjust for positive count when moving forward
+  encoder_RightMotor.init(1.0 / 3.0 * MOTOR_393_SPEED_ROTATIONS, MOTOR_393_TIME_DELTA);
+  encoder_RightMotor.setReversed(true);  // adjust for positive count when moving forward
+
+  Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+  Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+
+
+}
+
+void loop() {
+
+  //Serial.print("Right Motor: ");
+  //Serial.println(encoder_RightMotor.getRawPosition());
+  Serial.print("Left Motor: ");
+  Serial.println(encoder_LeftMotor.getRawPosition());
+
+  int pos = Curr_Left_Motor_Position - Prev_Left_Motor_Position;
+  if ((Curr_Left_Motor_Position - Prev_Left_Motor_Position)<300){
+   servo_LeftMotor.writeMicroseconds(1700);
+   servo_RightMotor.writeMicroseconds(1300);}
+  else {
+   servo_LeftMotor.writeMicroseconds(1500);
+   servo_RightMotor.writeMicroseconds(1500);}
+   
+  
+  Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+  currentMillis=millis();
+  mpu6050.update();
+  Serial.print("\tangleZ : ");
+  Serial.println(mpu6050.getAngleZ());
+  currAngle=mpu6050.getAngleZ();
+  if (currAngle<0)
+  {
+    currAngle=currAngle+(((int(currAngle))%360)*-360)+360;
+  }
+  if (currAngle>360)
+  {
+    currAngle=currAngle-(((int(currAngle))%360)*360);
+  }
+
+  if ((currentMillis-prevMillis)>returnTimer)
+  {
+    if (currAngle<=360&&currAngle>=180)//after obstacles are navigated around robot will continue in northern direction
+    {
+      currDirection=north;
+      if(currAngle>270+angleOffset)
+      {
+        servo_RightMotor.writeMicroseconds(1300);
+        servo_LeftMotor.writeMicroseconds(1700);
+      }
+      else if (currAngle<270-angleOffset)
+      {
+        servo_LeftMotor.writeMicroseconds(1300);
+        servo_RightMotor.writeMicroseconds(1700);
+      }   
+    }
+    else 
+    {
+      currDirection=south;
+      if (currAngle>90+angleOffset)
+      {
+        servo_LeftMotor.writeMicroseconds(1300);
+        servo_RightMotor.writeMicroseconds(1700);
+      }
+      else if (currAngle<90-angleOffset)
+      {
+        servo_RightMotor.writeMicroseconds(1300):
+        servo_LeftMotor.writeMicroseconds(1700);
+      }
+    }
+    if (currDirection==north&&//IR_Check_Right==true)
+    {
+      //90 degree turn clockwise
+      checkFront=true;// don't know if this is the best place for this
+    }
+    if (currDirection==south&&//IR_Check_Left==true)
+    {
+      //90 degree turn counter-clockwise
+      checkFront=true;
+      
+    }
+    if(checkFront)
+  {
+      if (IR_CHECK_FRONT==true)
+      {
+        //keep going straight
+      }
+     else
+     {
+       
+       if (currDirection==north)
+        {
+         if(!(currAngle>north-angleOffset&&currAngle<north+angleOffset))
+         servo_LeftMotor.writeMicroseconds(1300);
+         servo_RightMotor.writeMicroseconds(1700);
+        }
+        else
+        {
+          if(!(currAngle<south+angleOffset&&currAngle>south-angleOffset))
+          {
+            servo_RightMotor.writeMicroseconds(1300);
+            servo_LeftMotor.writeMicroseconds(1700);
+          }
+        
+       }
+     }
+    }
+    if ((checkFront==true&&(currAngle<north+angleOffset&&currAngle>north-angleOffset))||(checkFront==true&&(currAngle<south+angleOffset&&currAngle>south-angleOffset)))
+    {
+      checkFront=false;
+    }
+  }
+     
+
+}
