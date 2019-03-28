@@ -25,6 +25,8 @@ double north;
 double south;
 boolean turnside=false;
 boolean turnfront=false;
+boolean IR_side_seen=false;
+boolean IR_front_seen=false;
 
 unsigned long prevMillis=0;
 unsigned long currentMillis=0;
@@ -62,14 +64,13 @@ void loop() {
   {
     currAngle=currAngle-(((int(currAngle))%360)*360);
   }
+  Serial.println(currAngle);
 
   if ((currentMillis-prevMillis)>returnTimer)
   {
     if (currAngle<=360&&currAngle>=180)//after obstacles are navigated around robot will continue in northern direction
     {
       currDirection=north;
-      if turnside=true;
-      {
       if(currAngle>270+angleOffset)
       {
         servo_RightMotor.writeMicroseconds(1300);
@@ -82,37 +83,63 @@ void loop() {
         servo_RightMotor.writeMicroseconds(1700);
        
       }   
+      else if (currAngle<270+angleOffset&&currAngle>270-angleOffset)
+      {
+        servo_LeftMotor.writeMicroseconds(1600);
+        servo_RightMotor.writeMicroseconds(1600);
+        turnside = true;
       }
+      
     }
     else 
     {
       currDirection=south;
-      if (turnside=true)
       if (currAngle>90+angleOffset)
       {
         servo_LeftMotor.writeMicroseconds(1300);
         servo_RightMotor.writeMicroseconds(1700);
-        turnside=true;
       }
       else if (currAngle<90-angleOffset)
       {
         servo_RightMotor.writeMicroseconds(1300):
         servo_LeftMotor.writeMicroseconds(1700);
+      }
+      else if (currAngle<90+angleOffset&&currAngle>90-angleOffset)
+      {
         turnside=true;
       }
     }
-    if (currDirection==north&&IRSensor=true)
+    if (currDirection==north&&turnside==true)
     {
-      if(currAngle>initAngle+177)
+      //IR Ping
+      if (IRSensor=seen)
       {
-        servo_RightMotor.writeMicroseconds(1300);
-        servo_LeftMotor.writeMicroseconds(1700);
+        IR_side_seen=true;
       }
-      turnfront=true;
-      turnside=false
+      if (IR_side_seen==true)
+      {
+        if(currAngle>initAngle+180+angleOffset)
+        {
+          servo_RightMotor.writeMicroseconds(1300);
+          servo_LeftMotor.writeMicroseconds(1700);
+        }
+        else if (currAngle>initAngle+180-angleOffset&&currAngle<initAngle+180+angleOffset)
+        {
+          servo_RightMotor.writeMicroseconds(1600);
+          servo_LeftMotor.writeMicroseconds(1600);
+          turnfront=true;
+        }
+      }
+      else
+      {
+        servo_RightMotor.writeMicroseconds(1600):
+        servo_LeftMotor.writeMicroseconds(1600);
+      }
     }
-    if (currDirection==south&&//IR_Check_Left==true)
+    else if (currDirection==south&&turnside=true)
     {
+      //IR Ping
+      if *IR sensor
       if (currAngle<initAngle+183)
       {
         servo_RightMotor.writeMicroseconds(1700);
