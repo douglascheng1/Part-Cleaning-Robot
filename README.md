@@ -1,3 +1,5 @@
+int state;
+
 #include <Servo.h>
 #include <EEPROM.h>
 #include <uSTimer2.h>
@@ -19,20 +21,18 @@ long Curr_Right_Motor_Position;
 
 MPU6050 mpu6050(Wire);
 
-int US_check = 0;
-
 //pins (changeable)
-const int ultrasonic_Front_IN = 2;
-const int ultrasonic_Front_OUT = 2;
-const int ultrasonic_Left_IN = 4;
-const int ultrasonic_Left_OUT = 4;
-const int ultrasonic_Right_IN = 5;
-const int ultrasonic_Right_OUT = 5;
-const int motor_Right = 6;
-const int motor_Left = 7;
+const int ultrasonic_Front_IN = 6;
+const int ultrasonic_Front_OUT = 5;
+const int ultrasonic_Left_IN = 8;
+const int ultrasonic_Left_OUT = 7;
+const int ultrasonic_Right_IN = 4;
+const int ultrasonic_Right_OUT = 3;
+const int motor_Right = 11;
+const int motor_Left = 10;
 const int infared_Front = 8;
 const int infared_Back = 9;
-const int bumper_switch = 2;
+//const int bumper = 2;
 
 //calibration values
 unsigned int motor_Speed = 1900;        //run speed
@@ -45,7 +45,6 @@ unsigned int ultrasonic_Right_Distance = 500;         //L US distance
 
 
 //helper variables
-boolean ultrasonic_Clear[5] = {true,true,true,true,true}; //state for ultrasonic sensors (FL,FM,FR,L,R). Stores if value is lower than limit (aka ur gonna crash soon)
 int timeFlag = 0;
 int runFlag = 0;
 int turnTime45 = 500;    //time to spin when stuck
@@ -54,9 +53,64 @@ int infaredCheckInterval = 10000;   //how frequent to check for infared
 int infaredCheckTime = 1000;        //how long to spin for when checking infared
 int infaredNumber = 0;
 unsigned long ul_Echo_Time;
-boolean Encoder_Turn = true;
 boolean East_check;
 int ZigZag = 0;
+boolean Left_turn;
+boolean Right_turn;
+boolean right_hit = false;
+const int left_bumper = 9;
+boolean left_hit = false;
+int US_check = 0;
+
+void check_US() // Function to check ultrasonics
+{
+  int middle = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT); // Change to actual variable
+  Serial.println(middle);
+  if (middle <= 15){
+    US_check++;
+    if (US_check >=20){
+      int left = Ping(ultrasonic_Left_IN, ultrasonic_Left_OUT); // change to actual variables for pins of US
+      int right = Ping(ultrasonic_Right_IN, ultrasonic_Right_OUT);
+      Serial.print("Right ");
+      Serial.println(right);
+      Serial.print("Left ");
+      Serial.println(left);
+      if (right < left){
+        servo_LeftMotor.writeMicroseconds(1300);
+        servo_RightMotor.writeMicroseconds(1500);
+        Left_turn = true;
+        Right_turn = false;
+      }
+      else if (left <= right) {
+        servo_LeftMotor.writeMicroseconds(1500);
+        servo_RightMotor.writeMicroseconds(1300);
+        Right_turn = true;
+        Left_turn = false;
+      }
+      Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+      Prev_Right_Motor_Position = encoder_RightMotor.getRawPosition();
+    }
+  }
+  else {
+   US_check = 0;
+     // keep current speeds
+  }
+}
+
+// measure distance to target using ultrasonic sensor
+int Ping(int ci_Ultrasonic_Data, int ci_Ultrasonic_Ping)
+{
+  //Ping Ultrasonic
+  //Send the Ultrasonic Range Finder a 10 microsecond pulse per tech spec
+  digitalWrite(ci_Ultrasonic_Ping, HIGH);
+  delayMicroseconds(10);  //The 10 microsecond pause where the pulse in "high"
+  digitalWrite(ci_Ultrasonic_Ping, LOW);
+  //use command pulseIn to listen to Ultrasonic_Data pin to record the
+  //time that it takes from when the Pin goes HIGH until it goes LOW
+  ul_Echo_Time = pulseIn(ci_Ultrasonic_Data, HIGH, 10000);
+
+  return (ul_Echo_Time/58);
+}
 
 
 void setup() {
@@ -65,8 +119,8 @@ void setup() {
   
   // setup compass
   Wire.begin();
-  mpu6050.begin();
-  mpu6050.calcGyroOffsets(true);
+ // mpu6050.begin();
+  //mpu6050.calcGyroOffsets(true);
 
   pinMode(ultrasonic_Front_IN, INPUT); // Set up Ultra Sonics
   pinMode(ultrasonic_Front_OUT, OUTPUT);
@@ -89,134 +143,109 @@ void setup() {
   encoder_RightMotor.init(1.0 / 3.0 * MOTOR_393_SPEED_ROTATIONS, MOTOR_393_TIME_DELTA);
   encoder_RightMotor.setReversed(true);  // adjust for positive count when moving forward
   
-  digitalWrite(bumper_switch, LOW);
-  attachInterrupt(0, bumpers, RISING);
+  pinMode(A2, INPUT_PULLUP);
+  pinMode(left_bumper, INPUT_PULLUP);
 
-  delay(5000);
-  servo_LeftMotor.writeMicroseconds(1700);
+  delay(3000);
+  servo_LeftMotor.writeMicroseconds(1730);
   servo_RightMotor.writeMicroseconds(1700);
 }
 
 void loop() {
 
-  US_check = check_US();
+ //delay(80);
+ check_US();
+
+ //Serial.print("CURR: ");
+ //Serial.println(Curr_Left_Motor_Position);
+ 
  
   //run 1(0-30sec)
-  if (millis<30000){
-    
-     if (US_check == 1){
-       servo_LeftMotor.writeMicroseconds(1300);
-       servo_RightMotor.writeMicroseconds(1700);
-       Curr_Right_Motor_Position = encoder_RightMotor.getRawPosition();
-       if (Curr_Right_Motor_Position - Prev_Right_Motor_Position >= 200){ // Maybe change 200
-        servo_LeftMotor.writeMicroseconds(1700);
-        servo_RightMotor.writeMicroseconds(1700);
-        US_check = 0; 
+  if (right_hit == false && left_hit == false && digitalRead(A2) == HIGH && digitalRead(left_bumper) == HIGH){
+  
+    if (1==1){
+      
+       if (Left_turn == true){
+         servo_LeftMotor.writeMicroseconds(1300);
+         servo_RightMotor.writeMicroseconds(1500);
+         Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+         //Serial.println(Curr_Right_Motor_Position - Prev_Right_Motor_Position);
+         if ((Prev_Left_Motor_Position - Curr_Left_Motor_Position) >= 300){ // Maybe change 200
+          servo_LeftMotor.writeMicroseconds(1730);
+          servo_RightMotor.writeMicroseconds(1700);
+          Left_turn = false;
+         }
        }
-     }
-     else if (US_check == 2){
-       servo_LeftMotor.writeMicroseconds(1700);
-       servo_RightMotor.writeMicroseconds(1300);
-       Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
-       if (Curr_Left_Motor_Position - Prev_Left_Motor_Position >= 200){ // Maybe change 200
-        servo_LeftMotor.writeMicroseconds(1700);
-        servo_RightMotor.writeMicroseconds(1700);
-        US_check = 0; 
+       else if (Right_turn == true){
+         servo_LeftMotor.writeMicroseconds(1500);
+         servo_RightMotor.writeMicroseconds(1300);
+         Curr_Right_Motor_Position = encoder_RightMotor.getRawPosition();
+         if ((Prev_Right_Motor_Position - Curr_Right_Motor_Position) >= 300){ // Maybe change 200
+          servo_LeftMotor.writeMicroseconds(1730);
+          servo_RightMotor.writeMicroseconds(1700);
+          Right_turn = false;
+         }
        }
-     }
-  }
-
-  if ((millis > 30000) && (direction == false){
-    servo_LeftMotor.writeMicroseconds(1700);
-    servo_RightMotor.writeMicroseconds(1300);
+    }
   }
   
-  if ((millis > 30000) && (direction == true)){
-    if (ZigZag == 0){
-      servo_LeftMotor.writeMicroseconds(1700);
-      servo_RightMotor.writeMicroseconds(1300);
-      Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition(); // Add Prev update into US check
-       if (Curr_Left_Motor_Position - Prev_Left_Motor_Position >= 200){ // Maybe change 200
-        ZigZag = 1;
-       }
-    else if (ZigZag == 1){
-      servo_LeftMotor.writeMicroseconds(1300);
-      servo_RightMotor.writeMicroseconds(1700);
-      Curr_Right_Motor_Position = encoder_RightMotor.getRawPosition();
-       if (Curr_Right_Motor_Position - Prev_Right_Motor_Position >= 200){ // Maybe change 200
-        ZigZag = 0;
-        } 
+  else if (right_hit == true){
+    servo_LeftMotor.writeMicroseconds(1300);
+    servo_RightMotor.writeMicroseconds(1500);
+    Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition(); 
+    if ((Prev_Left_Motor_Position - Curr_Left_Motor_Position)>600){
+     servo_LeftMotor.writeMicroseconds(1700);
+     servo_RightMotor.writeMicroseconds(1700);
+     right_hit = false;
     }
   }
-
-}
-
-// measure distance to target using ultrasonic sensor
-int Ping(int ci_Ultrasonic_Data, int ci_Ultrasonic_Ping)
-{
-  //Ping Ultrasonic
-  //Send the Ultrasonic Range Finder a 10 microsecond pulse per tech spec
-  digitalWrite(ci_Ultrasonic_Ping, HIGH);
-  delayMicroseconds(10);  //The 10 microsecond pause where the pulse in "high"
-  digitalWrite(ci_Ultrasonic_Ping, LOW);
-  //use command pulseIn to listen to Ultrasonic_Data pin to record the
-  //time that it takes from when the Pin goes HIGH until it goes LOW
-  ul_Echo_Time = pulseIn(ci_Ultrasonic_Data, HIGH, 10000);
-
-  return (ul_Echo_Time/58);
-#endif
-}
-
-int check_US() // Function to check ultrasonics
-{
-  int check = 0;
-  int middle = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT); // Change to actual variable
-  if (middle <= 7){
-    int left = Ping(ultrasonic_Left_IN, ultrasonic_Left_OUT); // change to actual variables for pins of US
-    int right = Ping(ultrasonic_Right_IN, ultrasonic_Right_OUT);
-    if (right < left){
-      servo_LeftMotor.writeMicroseconds(1300);
-      servo_RightMotor.writeMicroseconds(1700);
-      check = 1;
+  else if (left_hit == true){
+    servo_LeftMotor.writeMicroseconds(1500);
+    servo_RightMotor.writeMicroseconds(1300);
+    Curr_Right_Motor_Position = encoder_RightMotor.getRawPosition(); 
+    if ((Prev_Right_Motor_Position - Curr_Right_Motor_Position)>600){
+     servo_LeftMotor.writeMicroseconds(1700);
+     servo_RightMotor.writeMicroseconds(1700);
+     left_hit = false;
     }
-    else {
-      servo_LeftMotor.writeMicroseconds(1700);
-      servo_RightMotor.writeMicroseconds(1300);
-      check = 2;
-    }
-    Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
-    Prev_Right_Motor_Position = encoder_RightMotor.getRawPosition();
   }
-  else {
-    continue; // keep current speeds
+  else if (digitalRead(A2) == LOW){
+    right_hit = true;
+    left_hit = false;
+    servo_LeftMotor.writeMicroseconds(1300);
+    servo_RightMotor.writeMicroseconds(1500);
+    Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition(); 
   }
-  return check;
-}
-
-//functions
-
-void bumpers(){
-  servo_LeftMotor.writeMicroseconds(1300);
-  servo_RightMotor.writeMicroseconds(1300);
-  delay(500);
-  check_US();
-}
-
-void infaredCheck(){
-  int preSpin = millis();
-  int postSpin = preSpin;
-  while(postSpin - preSpin >= infaredCheckTime){
-    //returns 0 if found on front
-    if (digitalRead(infared_Front)==0){
-      infaredNumber = 1;
-    }
-    //returns 1 if seen from back
-    else if (digitalRead(infared_Back)==0){
-      infaredNumber = -1;
-    }
-      motor_Left_Speed = 1600;
-      motor_Right_Speed = 800;
+  else if (digitalRead(left_bumper) == LOW){
+    right_hit = false;
+    left_hit = true;
+    servo_LeftMotor.writeMicroseconds(1500);
+    servo_RightMotor.writeMicroseconds(1300);
+    Prev_Right_Motor_Position = encoder_RightMotor.getRawPosition(); 
   }
-  //returns -1 if not found
-  infaredNumber = 0;
+
+  
+//  if ((millis > 30000) && (direction == false){
+//    servo_LeftMotor.writeMicroseconds(1700);
+//    servo_RightMotor.writeMicroseconds(1300);
+//  }
+//  
+//  if ((millis > 30000) && (direction == true)){
+//    if (ZigZag == 0){
+//      servo_LeftMotor.writeMicroseconds(1700);
+//      servo_RightMotor.writeMicroseconds(1300);
+//      Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition(); // Add Prev update into US check
+//       if (Curr_Left_Motor_Position - Prev_Left_Motor_Position >= 200){ // Maybe change 200
+//        ZigZag = 1;
+//       }
+//    else if (ZigZag == 1){
+//      servo_LeftMotor.writeMicroseconds(1300);
+//      servo_RightMotor.writeMicroseconds(1700);
+//      Curr_Right_Motor_Position = encoder_RightMotor.getRawPosition();
+//       if (Curr_Right_Motor_Position - Prev_Right_Motor_Position >= 200){ // Maybe change 200
+//        ZigZag = 0;
+//        } 
+//    }
+//  }
+
 }
