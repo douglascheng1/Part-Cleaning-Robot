@@ -139,21 +139,37 @@ void loop() {
     else if (currDirection==south&&turnside=true)
     {
       //IR Ping
-      if *IR sensor
-      if (currAngle<initAngle+183)
+      if (IRSensor=seen)
       {
-        servo_RightMotor.writeMicroseconds(1700);
-        servo_LeftMotor.writeMicroseconds(1300);
+        IR_side_seen=true;
       }
-      turnfront=true;
-      turnside=false
+      if (IR_side_seen==true)
+      {
+        if(currAngle>initAngle+180+angleOffset)
+        {
+          servo_RightMotor.writeMicroseconds(1700);
+          servo_LeftMotor.writeMicroseconds(1300);
+        }
+        else if (currAngle>initAngle+180-angleOffset&&currAngle<initAngle+180+angleOffset)
+        {
+          servo_RightMotor.writeMicroseconds(1600);
+          servo_LeftMotor.writeMicroseconds(1600);
+          turnfront=true;
+        }
+      }
+      else
+      {
+        servo_RightMotor.writeMicroseconds(1600):
+        servo_LeftMotor.writeMicroseconds(1600);
+      }
       
     }
     if(turnfront==true)
   {
       if (IR_CHECK_FRONT==true)
       {
-        //keep going straight
+        servo_RightMotor.writeMicroseconds(1600);
+        servo_LeftMotor.writeMicroseconds(1600);
       }
      else
      {
@@ -188,6 +204,3 @@ void loop() {
     }
  
   }
-     
-
-}
