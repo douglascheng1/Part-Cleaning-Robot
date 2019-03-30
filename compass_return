@@ -71,7 +71,7 @@ void loop() {
 
   if ((currentMillis-prevMillis)>returnTimer)
   {
-    if (currAngle<=360&&currAngle>=180)//after obstacles are navigated around robot will continue in northern direction
+    if (currAngle<=360&&currAngle>=180&&turnfront==false&&IR_side_seen==false)//after obstacles are navigated around robot will continue in northern direction
     {
       currDirection=north;
       if(currAngle>270+angleOffset)
@@ -94,7 +94,7 @@ void loop() {
       }
       
     }
-    else 
+    else if(currAngle<180&&currAngle>0&&turnfront==false&&IR_side_seen==false)
     {
       currDirection=south;
       if (currAngle>90+angleOffset)
@@ -110,6 +110,8 @@ void loop() {
       else if (currAngle<90+angleOffset&&currAngle>90-angleOffset)
       {
         turnside=true;
+        servo_LeftMotor.writeMicroseconds(1600);
+        servo_RightMotor.writeMicroseconds(1600);
       }
     }
     if (currDirection==north&&turnside==true)
@@ -131,6 +133,7 @@ void loop() {
           servo_RightMotor.writeMicroseconds(1600);
           servo_LeftMotor.writeMicroseconds(1600);
           turnfront=true;
+          turnside=false;
         }
       }
       else
@@ -158,6 +161,7 @@ void loop() {
           servo_RightMotor.writeMicroseconds(1600);
           servo_LeftMotor.writeMicroseconds(1600);
           turnfront=true;
+          turnside=false;
         }
       }
       else
@@ -169,6 +173,11 @@ void loop() {
     }
     if(turnfront==true)
   {
+  //IR PING
+      if (IR==seen)
+      {
+       IR_CHECK_FRONT=true;
+      }
       if (IR_CHECK_FRONT==true)
       {
         servo_RightMotor.writeMicroseconds(1600);
@@ -177,30 +186,12 @@ void loop() {
      else
      {
        
-       if (currDirection==north)
-        {
-         if(!(currAngle>north-angleOffset&&currAngle<north+angleOffset))
-         servo_LeftMotor.writeMicroseconds(1300);
-         servo_RightMotor.writeMicroseconds(1700);
-         else
-         {
           turnfront=false;
-          turnside=true;
-         }
+          turnside=false;
+          IR_side_seen=false;
+      }
          
-        }
-        else
-        {
-          if(!(currAngle<south+angleOffset&&currAngle>south-angleOffset))
-          {
-            servo_RightMotor.writeMicroseconds(1300);
-            servo_LeftMotor.writeMicroseconds(1700);
-          }
-          else
-          {
-            turnfront=false;
-            turnside=true;
-          }
+        
           /*if (US_sensor value = prev US_sensor value)
           {
             US_timer=millis();
@@ -213,7 +204,7 @@ void loop() {
             180 degree turn
             }*/ //for US on back
         
-       }
+       
      }
     }
  
