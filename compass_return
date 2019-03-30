@@ -61,11 +61,11 @@ void loop() {
   currAngle=mpu6050.getAngleZ();
   if (currAngle<0)
   {
-    currAngle=currAngle+(((int(currAngle))%360)*-360)+360;
+    currAngle=currAngle+(((int(currAngle))/360)*-360)+360;
   }
   if (currAngle>360)
   {
-    currAngle=currAngle-(((int(currAngle))%360)*360);
+    currAngle=currAngle-(((int(currAngle))/360)*360);
   }
   Serial.println(currAngle);
 
