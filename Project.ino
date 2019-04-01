@@ -30,9 +30,9 @@ const int ultrasonic_Right_IN = 4;
 const int ultrasonic_Right_OUT = 3;
 const int motor_Right = 11;
 const int motor_Left = 10;
-const int infrared_Left = 8;
-const int infrared_Right = 9;
-const int infrared_Front = 11;
+const int infrared_Left = 1;
+const int infrared_Right = 1;
+const int infrared_Front = 0;
 
 //const int bumper = 2;
 
@@ -66,21 +66,21 @@ int returnState = 0;
 int mode = 2;
 bool firstRun = true;
 int distance = 20;
-bool isStuck;
-bool prevSeen = false;
-bool currSeen = false;
-unsigned int prevIRCheck = 0;
-bool infraredSeen_Last = false;
-bool backwards = false;
-int startpoint = 0;
-int midpoint = 0;
-bool centered = false;
-int bearing;
-bool mode9 = false;
+int bearing = 0;
+double initAngle = 0; //initial angle of compass to be stored
 
 //dummy function for gyroscope
 int getDegrees(){
-  return 1;
+   double currAngle=mpu6050.getAngleZ() - initAngle;
+  if (currAngle<0)
+  {
+    currAngle=currAngle+(((int(currAngle))/360)*-360)+360;
+  }
+  if (currAngle>360)
+  {
+    currAngle=currAngle-(((int(currAngle))/360)*360);
+  }
+  return currAngle;
 }
 
 void check_US() // Function to check ultrasonics
@@ -137,8 +137,8 @@ void setup() {
   
   // setup compass
   Wire.begin();
- // mpu6050.begin();
-  //mpu6050.calcGyroOffsets(true);
+  mpu6050.begin();
+  mpu6050.calcGyroOffsets(true);
 
   pinMode(ultrasonic_Front_IN, INPUT); // Set up Ultra Sonics
   pinMode(ultrasonic_Front_OUT, OUTPUT);
@@ -167,6 +167,9 @@ void setup() {
   delay(3000);
   servo_LeftMotor.writeMicroseconds(1750);
   servo_RightMotor.writeMicroseconds(1700);
+
+  initAngle=mpu6050.getAngleZ();
+  
 }
 
 
@@ -176,13 +179,16 @@ void dump(){
 }
 
 void loop() {
+  Serial.println("D,B,IR_F,IR_L,Mode");
+  Serial.println(getDegrees());
+  Serial.println(bearing);
+  Serial.println(infraredSeen_Front);
+  Serial.println(infraredSeen_Left);
+  Serial.println(mode);
+  
 
   
   switch(mode){
-    //gyro calibration (set current bearing to west)
-    case 0:
-    break;
-
     //normal run code (until 30s)
     case 1:
     //rotate towards S after 30s, then change modes
@@ -206,17 +212,34 @@ void loop() {
     infraredSeen_Left = (analogRead(infrared_Left)<infrared_Max);
     infraredSeen_Front = (analogRead(infrared_Front)<infrared_Max);        
     distance_Front = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT);
-    if(1){
-      
-    }
-    else if(infraredSeen_Front){
+    
+    if(infraredSeen_Front){
       bearing  = getDegrees();
-      mode9 = true;
-      mode = 9;
+      if (bearing>=175&&bearing<=185){
+        mode++;
+      }
+      //go South
+      else if (bearing<180){
+        mode = 99;
+      }
+      //go North (rotate counterclockwise until bearing = 270)
+      else{
+        mode = 88;
+      }
     }
     //rotate Westwards
     else if (infraredSeen_Right||infraredSeen_Left){
-      mode = 3;
+      //rotate clockwise until front sees
+      if (infraredSeen_Right){
+        mode = 77;
+      }
+      //rotate counterclockwise until front sees
+      else{
+        mode = 66;
+      }
+    }
+    else{
+      check_US();
     }
 
 
@@ -261,55 +284,62 @@ void loop() {
     if(firstRun){
       firstRun = false;
       mode=0;
-      mode9 = false;
     }
     else{
       Serial.println("FINISHED");
     }
     break;
 
-    case 8:
-    if (infraredSeen_Right||infraredSeen_Left){
-      distance = abs(tan(bearing))*abs(encoder_LeftMotor.getRawPosition() - Prev_Left_Motor_Position);
-      mode = 3;
+    //rotate counter-c until front sees
+    case 66:
+    infraredSeen_Front = (analogRead(infrared_Front)<infrared_Max);     
+    if (infraredSeen_Front){
+      mode = 2;
+    }
+    else{
+        servo_LeftMotor.writeMicroseconds(1700);
+        servo_RightMotor.writeMicroseconds(1300);  
+    }
+    break;
+    //rotate c until front sees
+    case 77:
+        infraredSeen_Front = (analogRead(infrared_Front)<infrared_Max);     
+    if (infraredSeen_Front){
+      mode = 2;
     }
     else{
         servo_LeftMotor.writeMicroseconds(1300);
-        servo_RightMotor.writeMicroseconds(1300); 
+        servo_RightMotor.writeMicroseconds(1700);  
     }
-    
     break;
-
+   
     
-    case 9:
-    //right
-    if (bearing>270){
-      if(getDegrees()>=175&&getDegrees()<=185){
-          servo_LeftMotor.writeMicroseconds(1700);
-          servo_RightMotor.writeMicroseconds(1300);  
-      }
-      else{
-        mode=8;
-      }
+    //rotate until getdegrees facing N
+    case 88:
+    if (getDegrees()<185&&getDegrees()>175){
+      mode = 2;
     }
-    //left
     else{
-        if(getDegrees()>=175&&getDegrees()<=185){
-          servo_LeftMotor.writeMicroseconds(1300);
-          servo_RightMotor.writeMicroseconds(1700);  
-      }
-      else{
-        mode=8;
-      }
+        servo_LeftMotor.writeMicroseconds(1300);
+        servo_RightMotor.writeMicroseconds(1700);        
     }
-    Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
-
+    break;
+    
+    //rotate until getdegrees facing S
+    case 99:
+        if (getDegrees()<275&&getDegrees()>265){
+      mode = 2;
+    }
+    else{
+        servo_LeftMotor.writeMicroseconds(1700);
+        servo_RightMotor.writeMicroseconds(1300);        
+    }
     break;
   }
   
   
   /*
- if (millis - timeCharged<30000){
+ if (KLJ,90millis - timeCharged<30000){
    check_US();
    delay(100);
   //run 1(0-30sec)
@@ -453,3 +483,6 @@ else if (returnState==4){
 
 */
 }
+
+
+//functions
