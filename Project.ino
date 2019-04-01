@@ -1,5 +1,3 @@
-
-
 #include <Servo.h>
 #include <EEPROM.h>
 #include <uSTimer2.h>
@@ -34,7 +32,8 @@ const int motor_Right = 11;
 const int motor_Left = 10;
 const int infrared_Left = 8;
 const int infrared_Right = 9;
-const int infrared_Back = 11;
+const int infrared_Front = 11;
+
 //const int bumper = 2;
 
 //calibration values
@@ -50,19 +49,34 @@ unsigned int distance_US = 20;
 
 //helper variables
 unsigned long ul_Echo_Time;
-boolean Left_turn;
-boolean Right_turn;
-boolean hit = false;
-boolean isReturning = false;
-boolean turnt = false;
+bool Left_turn;
+bool Right_turn;
+bool hit = false;
+bool isReturning = false;
+bool turnt = false;
 unsigned int timeCharged = 0;
 int direction_East = 0;
 int degree_Tolerance = 5;
-boolean isReturned = false;
-boolean infraredSeen_Right = false;
-boolean infraredSeen_Left = false;
+bool isReturned = false;
+bool infraredSeen_Right = false;
+bool infraredSeen_Left = false;
+bool infraredSeen_Front = false;
 int infrared_Max = 800;
 int returnState = 0;
+int mode = 2;
+bool firstRun = true;
+int distance = 20;
+bool isStuck;
+bool prevSeen = false;
+bool currSeen = false;
+unsigned int prevIRCheck = 0;
+bool infraredSeen_Last = false;
+bool backwards = false;
+int startpoint = 0;
+int midpoint = 0;
+bool centered = false;
+int bearing;
+bool mode9 = false;
 
 //dummy function for gyroscope
 int getDegrees(){
@@ -100,37 +114,6 @@ void check_US() // Function to check ultrasonics
   }
 }
 
-void check_US2() // Function to check ultrasonics
-{
-  int middle = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT); // Change to actual variable
-  Serial.println(middle);
-  if (middle <= 15){
-    int left = Ping(ultrasonic_Left_IN, ultrasonic_Left_OUT); // change to actual variables for pins of US
-    int right = Ping(ultrasonic_Right_IN, ultrasonic_Right_OUT);
-    Serial.print("Right ");
-    Serial.println(right);
-    Serial.print("Left ");
-    Serial.println(left);
-    //turn left
-    if (right <= left){
-      servo_LeftMotor.writeMicroseconds(1600);
-      servo_RightMotor.writeMicroseconds(1400);
-      Left_turn = true;
-      Right_turn = false;
-    }
-    else if (left < right) {
-      servo_LeftMotor.writeMicroseconds(1400);
-      servo_RightMotor.writeMicroseconds(1600);
-      Right_turn = true;
-      Left_turn = false;
-    }
-    Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
-    Prev_Right_Motor_Position = encoder_RightMotor.getRawPosition();
-  }
-  else {
-     // keep current speeds
-  }
-}
 
 // measure distance to target using ultrasonic sensor
 int Ping(int ci_Ultrasonic_Data, int ci_Ultrasonic_Ping)
@@ -186,8 +169,146 @@ void setup() {
   servo_RightMotor.writeMicroseconds(1700);
 }
 
-void loop() {
+
+//insert dump code here (it is okay to have stopping code)
+void dump(){
   
+}
+
+void loop() {
+
+  
+  switch(mode){
+    //gyro calibration (set current bearing to west)
+    case 0:
+    break;
+
+    //normal run code (until 30s)
+    case 1:
+    //rotate towards S after 30s, then change modes
+    Curr_Left_Motor_Position = Prev_Left_Motor_Position;
+    if (millis() - timeCharged>=30000){
+
+      if(Curr_Left_Motor_Position - Prev_Left_Motor_Position <= 600){
+        Prev_Left_Motor_Position = Curr_Left_Motor_Position;
+        Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition();    //gets motor position
+      }
+        else{
+      mode++;
+    }
+    }
+    break;
+
+    //coming back code (assume that there is one infrared in back, right and left)
+    //note: backwards driving towards east: more important that it makes it in than pick up shitsecond round
+    case 2:
+    infraredSeen_Right = (analogRead(infrared_Right)<infrared_Max);   //resets to see iff infrareds are seen
+    infraredSeen_Left = (analogRead(infrared_Left)<infrared_Max);
+    infraredSeen_Front = (analogRead(infrared_Front)<infrared_Max);        
+    distance_Front = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT);
+    if(1){
+      
+    }
+    else if(infraredSeen_Front){
+      bearing  = getDegrees();
+      mode9 = true;
+      mode = 9;
+    }
+    //rotate Westwards
+    else if (infraredSeen_Right||infraredSeen_Left){
+      mode = 3;
+    }
+
+
+
+    break;
+
+    //reverse code
+    case 3:
+    //if angle greater than +-3deg, turn
+    if (getDegrees()<=3||getDegrees()>=358){
+          servo_LeftMotor.writeMicroseconds(1700);
+          servo_RightMotor.writeMicroseconds(1300);      
+    }
+    else{
+      mode++;
+    }
+    break;
+
+
+    
+    //back in code (go back set distance + constant)
+    case 4:
+    Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition();    //gets motor position
+    //resets charge time and move on
+    if(Curr_Left_Motor_Position - Prev_Left_Motor_Position >=distance+2){
+      servo_LeftMotor.writeMicroseconds(1500);    //stops motors
+      servo_RightMotor.writeMicroseconds(1500);   //stops motors
+      timeCharged=millis();
+      mode++;
+    }
+    //go backwards
+    else{
+          servo_LeftMotor.writeMicroseconds(1300);
+          servo_RightMotor.writeMicroseconds(1300);
+    }
+    break;
+
+    //dumping code, then reset
+    case 5:
+    dump();
+    //reset after dumped
+    if(firstRun){
+      firstRun = false;
+      mode=0;
+      mode9 = false;
+    }
+    else{
+      Serial.println("FINISHED");
+    }
+    break;
+
+    case 8:
+    if (infraredSeen_Right||infraredSeen_Left){
+      distance = abs(tan(bearing))*abs(encoder_LeftMotor.getRawPosition() - Prev_Left_Motor_Position);
+      mode = 3;
+    }
+    else{
+        servo_LeftMotor.writeMicroseconds(1300);
+        servo_RightMotor.writeMicroseconds(1300); 
+    }
+    
+    break;
+
+    
+    case 9:
+    //right
+    if (bearing>270){
+      if(getDegrees()>=175&&getDegrees()<=185){
+          servo_LeftMotor.writeMicroseconds(1700);
+          servo_RightMotor.writeMicroseconds(1300);  
+      }
+      else{
+        mode=8;
+      }
+    }
+    //left
+    else{
+        if(getDegrees()>=175&&getDegrees()<=185){
+          servo_LeftMotor.writeMicroseconds(1300);
+          servo_RightMotor.writeMicroseconds(1700);  
+      }
+      else{
+        mode=8;
+      }
+    }
+    Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+
+    break;
+  }
+  
+  
+  /*
  if (millis - timeCharged<30000){
    check_US();
    delay(100);
@@ -319,11 +440,7 @@ else if (returnState==3){
 
 //dump code
 else if (returnState==4){
-/*
- * INSERT DUMPING CODE
- * 
- * 
- */
+//dumping code insert here
   returnState=0;
   timeCharged=millis();
 
@@ -334,8 +451,5 @@ else if (returnState==4){
   
  }
 
-
+*/
 }
-
-
-//functions
