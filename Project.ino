@@ -63,7 +63,7 @@ bool infraredSeen_Left = false;
 bool infraredSeen_Front = false;
 int infrared_Max = 800;
 int returnState = 0;
-int mode = 2;
+int mode = 99;
 bool firstRun = true;
 int distance = 20;
 int bearing = 0;
@@ -113,6 +113,8 @@ void check_US() // Function to check ultrasonics
   }
   else {
     // keep current speeds
+      servo_LeftMotor.writeMicroseconds(1700);
+      servo_RightMotor.writeMicroseconds(1700);
   }
 }
 
@@ -171,6 +173,8 @@ void setup() {
   servo_RightMotor.writeMicroseconds(1700);
 
   initAngle = mpu6050.getAngleZ();
+  mpu6050.update();
+  
 
 }
 
@@ -181,11 +185,11 @@ void dump() {
 }
 
 void loop() {
-  Serial.println("D,B,IR_F,IR_L,Mode");
+    mpu6050.update();
+  Serial.println("D,B,Mode");
+  Serial.println(mpu6050.getAngleZ());
   Serial.println(getDegrees());
   Serial.println(bearing);
-  Serial.println(infraredSeen_Front);
-  Serial.println(infraredSeen_Left);
   Serial.println(mode);
 
   //always check IRs first and front distance
