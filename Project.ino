@@ -27,7 +27,7 @@ const int ultrasonic_Front_OUT = 5;
 const int ultrasonic_Left_IN = 8;
 const int ultrasonic_Left_OUT = 7;
 const int ultrasonic_Right_IN = 4;
-const int ultrasonic_Right_OUT = 3;
+const int ultrasonic_Right_OUT = 0;
 const int motor_Right = 11;
 const int motor_Left = 10;
 const int infrared_Left = 1;
@@ -341,7 +341,7 @@ void loop() {
 
     //rotate until getdegrees facing N
     case 88:
-      if (getDegrees() < 185 && getDegrees() > 175) {
+      if (getDegrees() < 182 && getDegrees() > 178) {
         mode = 2;
       }
       else {
@@ -352,7 +352,7 @@ void loop() {
 
     //rotate until getdegrees facing S
     case 99:
-      if (getDegrees() < 275 && getDegrees() > 265) {
+      if (getDegrees() < 272 && getDegrees() > 268) {
         mode = 2;
       }
       else {
