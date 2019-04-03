@@ -32,6 +32,7 @@ const int motor_Right = 11;
 const int motor_Left = 10;
 const int infrared_Left = A0;
 const int infrared_Right = A1;
+const int infrared_Front = A3;
 
 //const int bumper = 2;
 
