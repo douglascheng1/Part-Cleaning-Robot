@@ -65,16 +65,19 @@ bool isReturned = false;
 bool infraredSeen_Right = false;
 bool infraredSeen_Left = false;
 bool infraredSeen_Front = false;
-int infrared_Max = 800;
+int infrared_Max = 1;
 int returnState = 0;
 int mode = 2;
 bool firstRun = true;
 int distance = 20;
 int bearing = 0;
 double initAngle = 0; //initial angle of compass to be stored
-unsigned int infraredSeen_Last = 0;
+long infraredSeen_Last = 0;
 bool infraredSeen = false;
 int lastmode = 0;
+int counter_Front = 0;
+int counter_Left = 0;
+int counter_Right = 0;
 
 //dummy function for gyroscope
 double getDegrees() {
@@ -92,35 +95,35 @@ double getDegrees() {
 
 void check_US() // Function to check ultrasonics
 {
-  int middle = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT); // Change to actual variable
-  //Serial.println(middle);
-  if (middle <= 15) {
-    int left = Ping(ultrasonic_Left_IN, ultrasonic_Left_OUT); // change to actual variables for pins of US
-    int right = Ping(ultrasonic_Right_IN, ultrasonic_Right_OUT);
-//    Serial.print("Right ");
-//    Serial.println(right);
-//    Serial.print("Left ");
-//    Serial.println(left);
-    if (right < left) {
-      servo_LeftMotor.writeMicroseconds(1300);
-      servo_RightMotor.writeMicroseconds(1500);
-      Left_turn = true;
-      Right_turn = false;
-    }
-    else if (left <= right) {
-      servo_LeftMotor.writeMicroseconds(1500);
-      servo_RightMotor.writeMicroseconds(1300);
-      Right_turn = true;
-      Left_turn = false;
-    }
-    Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
-    Prev_Right_Motor_Position = encoder_RightMotor.getRawPosition();
-  }
-  else {
-    // keep current speeds
-      servo_LeftMotor.writeMicroseconds(1700);
-      servo_RightMotor.writeMicroseconds(1700);
-  }
+//  int middle = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT); // Change to actual variable
+//  //Serial.println(middle);
+//  if (middle <= 15) {
+//    int left = Ping(ultrasonic_Left_IN, ultrasonic_Left_OUT); // change to actual variables for pins of US
+//    int right = Ping(ultrasonic_Right_IN, ultrasonic_Right_OUT);
+////    Serial.print("Right ");
+////    Serial.println(right);
+////    Serial.print("Left ");
+////    Serial.println(left);
+//    if (right < left) {
+//      servo_LeftMotor.writeMicroseconds(1300);
+//      servo_RightMotor.writeMicroseconds(1500);
+//      Left_turn = true;
+//      Right_turn = false;
+//    }
+//    else if (left <= right) {
+//      servo_LeftMotor.writeMicroseconds(1500);
+//      servo_RightMotor.writeMicroseconds(1300);
+//      Right_turn = true;
+//      Left_turn = false;
+//    }
+//    Prev_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+//    Prev_Right_Motor_Position = encoder_RightMotor.getRawPosition();
+//  }
+//  else {
+//    // keep current speeds
+//      servo_LeftMotor.writeMicroseconds(1700);
+//      servo_RightMotor.writeMicroseconds(1700);
+//  }
 }
 
 
@@ -175,13 +178,10 @@ void setup() {
 
   delay(3000);
   servo_LeftMotor.writeMicroseconds(1750);
-  servo_RightMotor.writeMicroseconds(1700);
-
-  initAngle = mpu6050.getAngleZ();
   mpu6050.update();
   arm.attach(9);
   basket.attach(3);  
-
+  infraredSeen_Last = millis();
 }
 
 
@@ -200,6 +200,9 @@ void dump() {
   delay(1000);
   basket.write(120);
   delay(1000);
+  servo_RightMotor.writeMicroseconds(1700);
+
+  initAngle = mpu6050.getAngleZ();
   arm.write(150);
   delay(100);
   basket.write(95);
@@ -211,6 +214,8 @@ void dump() {
 }
 
 void loop() {
+  arm.write(10);
+  basket.write(180);
     mpu6050.update();
 //  Serial.println("D,B,Mode");
  // Serial.println(mpu6050.getAngleZ());
@@ -225,24 +230,39 @@ void loop() {
   
 
   //always check IRs first and front distance
-  infraredSeen_Right = (analogRead(infrared_Right) < infrared_Max); //resets to see iff infrareds are seen
-  infraredSeen_Left = (analogRead(infrared_Left) < infrared_Max);
-  infraredSeen_Front = (analogRead(infrared_Front) < infrared_Max);
+  infraredSeen_Right = false;
+  infraredSeen_Left = false;
+  infraredSeen_Front = false;
   distance_Front = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT);
- if(infraredSeen_Front){
+ //if(!digitalRead(infrared_Front)){  
+ if (digitalRead(infrared_Front)==0){
   Serial.println("Front Seen!");
+  counter_Front++;
  }
- if(infraredSeen_Right){
+ if(!digitalRead(infrared_Right)){
   Serial.println("Right Seen!");
+  counter_Right++;
  }
-  if(infraredSeen_Left){
+  if(!digitalRead(infrared_Left)){
   Serial.println("Left Seen!");
+  counter_Left++;
+ }
+ if(counter_Front==3||counter_Right==3||counter_Left==3){
+  if (counter_Front==3){
+    infraredSeen_Front = true;
+  }
+  else if (counter_Right==3){
+    infraredSeen_Right = true;
+  }
+  else{
+    infraredSeen_Left = true;
+  }
+  counter_Front = 0;
+  counter_Right = 0;
+  counter_Left = 0;
+  infraredSeen_Last = millis();
  }
   
-  if (infraredSeen_Left || infraredSeen_Right || infraredSeen_Front) {
-    infraredSeen_Last = millis();
-    infraredSeen = true;
-  }
   else {
     infraredSeen = false;
   }
@@ -307,21 +327,22 @@ void loop() {
 
     //reverse code
     case 3:
+    infraredSeen_Last = millis();
       //if angle greater than +-3deg, turn
-      if (getDegrees() <= 3 || getDegrees() >= 358) {
-        servo_LeftMotor.writeMicroseconds(1700);
-        servo_RightMotor.writeMicroseconds(1300);
+      if (getDegrees() <= 5 || getDegrees() >= 355) {
+        mode++;
       }
       else {
-        mode++;
+        servo_LeftMotor.writeMicroseconds(1700);
+        servo_RightMotor.writeMicroseconds(1300);
       }
       break;
 
     //back in code (go back set distance + constant)
     case 4:
-      Curr_Left_Motor_Position = encoder_LeftMotor.getRawPosition();    //gets motor position
+      
       //resets charge time and move on
-      if (Curr_Left_Motor_Position - Prev_Left_Motor_Position >= distance + 2) {
+      if (millis() - infraredSeen_Last>10000) {
         servo_LeftMotor.writeMicroseconds(1500);    //stops motors
         servo_RightMotor.writeMicroseconds(1500);   //stops motors
         timeCharged = millis();
