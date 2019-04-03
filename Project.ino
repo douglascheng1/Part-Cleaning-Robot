@@ -6,8 +6,12 @@
 #include <I2CEncoder.h>
 #include <MPU6050_tockn.h>
 
+//servo declaration
 Servo servo_RightMotor;
 Servo servo_LeftMotor;
+Servo basket;
+Servo arm;
+
 
 I2CEncoder encoder_RightMotor;
 I2CEncoder encoder_LeftMotor;
@@ -175,14 +179,35 @@ void setup() {
 
   initAngle = mpu6050.getAngleZ();
   mpu6050.update();
-  
+  arm.attach(9);
+  basket.attach(3);  
 
 }
 
 
 //insert dump code here (it is okay to have stopping code)
 void dump() {
-
+   arm.write(10);
+  basket.write(180);
+  delay(1000);
+  arm.write(40);
+  delay(1000);
+  arm.write(80);
+  delay(100);
+  basket.write(140);
+  delay(1000);
+  arm.write(120);
+  delay(1000);
+  basket.write(120);
+  delay(1000);
+  arm.write(150);
+  delay(100);
+  basket.write(95);
+  delay(2000);
+  arm.write(170);
+  delay(100);
+  basket.write(115);
+  delay(1000);
 }
 
 void loop() {
