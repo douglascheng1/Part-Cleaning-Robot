@@ -63,7 +63,7 @@ bool infraredSeen_Left = false;
 bool infraredSeen_Front = false;
 int infrared_Max = 800;
 int returnState = 0;
-int mode = 99;
+int mode = 2;
 bool firstRun = true;
 int distance = 20;
 int bearing = 0;
@@ -204,6 +204,16 @@ void loop() {
   infraredSeen_Left = (analogRead(infrared_Left) < infrared_Max);
   infraredSeen_Front = (analogRead(infrared_Front) < infrared_Max);
   distance_Front = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT);
+ if(infraredSeen_Front){
+  Serial.println("Front Seen!");
+ }
+ if(infraredSeen_Right){
+  Serial.println("Right Seen!");
+ }
+  if(infraredSeen_Left){
+  Serial.println("Left Seen!");
+ }
+  
   if (infraredSeen_Left || infraredSeen_Right || infraredSeen_Front) {
     infraredSeen_Last = millis();
     infraredSeen = true;
@@ -234,16 +244,17 @@ void loop() {
     case 2:
       //infrared not seen for 20s, rotate around
       if (millis() - infraredSeen_Last >= 20000) {
-        infraredSeen_Last - millis();
+        infraredSeen_Last = millis();
         mode = 55;
       }
       else if (infraredSeen_Front) {
+        infraredSeen_Last = millis();
         bearing  = getDegrees();
         if (bearing >= 175 && bearing <= 185) {
           mode++;
         }
         //go South
-        else if (bearing < 180) {
+        else if (bearing > 180) {
           mode = 99;
         }
         //go North (rotate counterclockwise until bearing = 270)
@@ -253,6 +264,7 @@ void loop() {
       }
       //rotate Westwards
       else if (infraredSeen_Right || infraredSeen_Left) {
+        infraredSeen_Last = millis();
         //rotate clockwise until front sees
         if (infraredSeen_Right) {
           mode = 77;
@@ -325,6 +337,10 @@ void loop() {
       break;
     //rotate counter-c until front sees
     case 66:
+        //spin time limit of 4 sec to avoid getting stuck
+      if (millis() - infraredSeen_Last>=4000){
+        mode = 2;
+      }
       if (infraredSeen_Front) {
         mode = 2;
       }
@@ -336,6 +352,10 @@ void loop() {
 
     //rotate c until front sees
     case 77:
+    //spin time limit of 4 sec to avoid getting stuck
+      if (millis() - infraredSeen_Last>=4000){
+        mode = 2;
+      }
       if (infraredSeen_Front) {
         mode = 2;
       }
@@ -348,7 +368,7 @@ void loop() {
 
     //rotate until getdegrees facing N
     case 88:
-      if (getDegrees() < 182 && getDegrees() > 178) {
+      if (getDegrees() < 92 && getDegrees() > 88) {
         mode = 2;
       }
       else {
