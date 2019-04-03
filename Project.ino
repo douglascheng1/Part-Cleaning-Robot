@@ -30,9 +30,8 @@ const int ultrasonic_Right_IN = 4;
 const int ultrasonic_Right_OUT = 0;
 const int motor_Right = 11;
 const int motor_Left = 10;
-const int infrared_Left = 1;
-const int infrared_Right = 1;
-const int infrared_Front = 0;
+const int infrared_Left = A0;
+const int infrared_Right = A1;
 
 //const int bumper = 2;
 
@@ -70,9 +69,10 @@ int bearing = 0;
 double initAngle = 0; //initial angle of compass to be stored
 unsigned int infraredSeen_Last = 0;
 bool infraredSeen = false;
+int lastmode = 0;
 
 //dummy function for gyroscope
-int getDegrees() {
+double getDegrees() {
   double currAngle = mpu6050.getAngleZ();
   if (currAngle < 0)
   {
@@ -88,14 +88,14 @@ int getDegrees() {
 void check_US() // Function to check ultrasonics
 {
   int middle = Ping(ultrasonic_Front_IN, ultrasonic_Front_OUT); // Change to actual variable
-  Serial.println(middle);
+  //Serial.println(middle);
   if (middle <= 15) {
     int left = Ping(ultrasonic_Left_IN, ultrasonic_Left_OUT); // change to actual variables for pins of US
     int right = Ping(ultrasonic_Right_IN, ultrasonic_Right_OUT);
-    Serial.print("Right ");
-    Serial.println(right);
-    Serial.print("Left ");
-    Serial.println(left);
+//    Serial.print("Right ");
+//    Serial.println(right);
+//    Serial.print("Left ");
+//    Serial.println(left);
     if (right < left) {
       servo_LeftMotor.writeMicroseconds(1300);
       servo_RightMotor.writeMicroseconds(1500);
@@ -186,11 +186,17 @@ void dump() {
 
 void loop() {
     mpu6050.update();
-  Serial.println("D,B,Mode");
-  Serial.println(mpu6050.getAngleZ());
-  Serial.println(getDegrees());
-  Serial.println(bearing);
-  Serial.println(mode);
+//  Serial.println("D,B,Mode");
+ // Serial.println(mpu6050.getAngleZ());
+  //Serial.print(getDegrees());
+  if (mode!=lastmode){
+      Serial.print(mode);
+      Serial.print(" ");
+      Serial.print(getDegrees());
+      Serial.println(" ");
+  }
+  lastmode = mode;
+  
 
   //always check IRs first and front distance
   infraredSeen_Right = (analogRead(infrared_Right) < infrared_Max); //resets to see iff infrareds are seen
