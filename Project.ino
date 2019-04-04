@@ -105,10 +105,6 @@ void check_US() // Function to check ultrasonics
   if (middle <= 15) {
     int left = Ping(ultrasonic_Left_IN, ultrasonic_Left_OUT); // change to actual variables for pins of US
     int right = Ping(ultrasonic_Right_IN, ultrasonic_Right_OUT);
-//    Serial.print("Right ");
-//    Serial.println(right);
-//    Serial.print("Left ");
-//    Serial.println(left);
     if (right < left) {
       servo_LeftMotor.writeMicroseconds(1300);
       servo_RightMotor.writeMicroseconds(1500);
@@ -234,7 +230,7 @@ void loop() {
   lastmode = mode;
   
 
-  if ((millis()-last_time)>=50){
+  if ((millis()-last_time)>=20){
     last_time = millis();
     IR_state++;
     if (IR_state == 1){
@@ -397,24 +393,32 @@ void loop() {
     case 55:
       if (infraredSeen) {
         mode = 2;
+        servo_LeftMotor.writeMicroseconds(1700);
+        servo_RightMotor.writeMicroseconds(1700);
       }
-      //rotate
-      else if (millis() - infraredSeen_Last < 3000) {
+             //spin time limit of 5 sec to avoid getting stuck
+      else if (millis() - infraredSeen_Last < 5000) {
         servo_LeftMotor.writeMicroseconds(1700);
         servo_RightMotor.writeMicroseconds(1300);
       }
       else {
         mode = 2;
+        servo_LeftMotor.writeMicroseconds(1700);
+        servo_RightMotor.writeMicroseconds(1700);
       }
       break;
     //rotate counter-c until front sees
     case 66:
-        //spin time limit of 4 sec to avoid getting stuck
-      if (millis() - infraredSeen_Last>=4000){
+        //spin time limit of 5 sec to avoid getting stuck
+      if (millis() - infraredSeen_Last>=5000){
         mode = 2;
+        servo_LeftMotor.writeMicroseconds(1700);
+        servo_RightMotor.writeMicroseconds(1700);
       }
       if (infraredSeen_Front) {
         mode = 2;
+        servo_LeftMotor.writeMicroseconds(1700);
+        servo_RightMotor.writeMicroseconds(1700);
       }
       else {
         servo_LeftMotor.writeMicroseconds(1700);
@@ -427,9 +431,13 @@ void loop() {
     //spin time limit of 4 sec to avoid getting stuck
       if (millis() - infraredSeen_Last>=4000){
         mode = 2;
+        servo_LeftMotor.writeMicroseconds(1700);
+        servo_RightMotor.writeMicroseconds(1700);
       }
       if (infraredSeen_Front) {
         mode = 2;
+        servo_LeftMotor.writeMicroseconds(1700);
+        servo_RightMotor.writeMicroseconds(1700);
       }
       else {
         servo_LeftMotor.writeMicroseconds(1300);
@@ -440,8 +448,10 @@ void loop() {
 
     //rotate until getdegrees facing N
     case 88:
-      if (getDegrees() < 92 && getDegrees() > 88) {
+      if (getDegrees() < 272 && getDegrees() > 268) {
         mode = 2;
+        servo_LeftMotor.writeMicroseconds(1700);
+        servo_RightMotor.writeMicroseconds(1700);
       }
       else {
         servo_LeftMotor.writeMicroseconds(1300);
@@ -451,8 +461,10 @@ void loop() {
 
     //rotate until getdegrees facing S
     case 99:
-      if (getDegrees() < 272 && getDegrees() > 268) {
+      if (getDegrees() < 92 && getDegrees() > 88) {
         mode = 2;
+        servo_LeftMotor.writeMicroseconds(1700);
+        servo_RightMotor.writeMicroseconds(1700);
       }
       else {
         servo_LeftMotor.writeMicroseconds(1700);
